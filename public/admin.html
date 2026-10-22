@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel da eleição</title>
+<style>
+body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0b1220;color:#e8eefc;margin:0;padding:18px;max-width:760px;margin-inline:auto}
+h1{font-size:22px;margin:0 0 4px} .sub{opacity:.7;font-size:13px;margin-bottom:14px}
+.card{background:#14203a;border:1px solid #27385e;border-radius:12px;padding:14px;margin-bottom:12px}
+button{font:inherit;font-weight:700;padding:10px 16px;border-radius:10px;border:0;cursor:pointer;margin:4px 6px 4px 0}
+.b-end{background:#e63946;color:#fff}.b-new{background:#ffd23f;color:#222}.b-ok{background:#2fa84f;color:#fff}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 8px;text-align:left;border-bottom:1px solid #27385e}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.on{background:#1e7a43}.off{background:#8a2a2a}.sim{background:#d90429}
+#msg{min-height:20px;font-size:14px;margin:6px 0} input{font:inherit;padding:8px;border-radius:8px;border:1px solid #27385e;background:#0b1220;color:#fff;width:110px}
+</style></head><body>
+<h1>Painel da eleição</h1><div class="sub">Somente neste computador. Não compartilhe a tela com o token na barra de endereço.</div>
+<div class="card"><span id="mode" class="pill"></span> <span id="conn" class="pill"></span> <span id="elec" class="pill"></span>
+<div id="msg"></div>
+<button class="b-end" id="finish">Encerrar eleição e mostrar resultado</button>
+<button class="b-new" id="new">Nova eleição (zerar placar)</button></div>
+<div class="card"><b>Placar</b><table id="rank"></table></div>
+<div class="card"><b>Curtidas</b><div id="likes"></div>
+<div style="margin-top:8px">Curtidas por eleitor: <input id="thr" type="number" min="1" step="100"> <button class="b-ok" id="setThr">Aplicar</button></div></div>
+<div class="card"><b>Saúde</b><div id="health" style="font-size:14px;line-height:1.6"></div></div>
+<script>
+const hash = new URLSearchParams(location.hash.slice(1));
+if (hash.get('token')) { sessionStorage.setItem('tok', hash.get('token')); history.replaceState(null, '', location.pathname); }
+const H = () => ({ 'x-admin-token': sessionStorage.getItem('tok') || '' });
+const $ = (i) => document.getElementById(i), msg = (t) => ($('msg').textContent = t);
+const fmt = (n) => Number(n).toLocaleString('pt-BR');
+async function api(path, opts = {}) { const r = await fetch(path, { ...opts, headers: { ...H(), ...(opts.headers || {}) } }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || r.status); return j; }
+async function refresh() {
+  try {
+    const s = await api('/api/admin/status'); const sn = s.snapshot;
+    $('mode').textContent = sn.simulated ? 'SIMULAÇÃO' : 'AO VIVO (dados reais)'; $('mode').className = 'pill ' + (sn.simulated ? 'sim' : 'on');
+    $('conn').textContent = 'Conexão: ' + (s.health?.connection ?? '—') + ' • cena aberta: ' + (s.overlays ? 'sim' : 'não'); $('conn').className = 'pill ' + (s.health?.connection === 'connected' || sn.simulated ? 'on' : 'off');
+    $('elec').textContent = sn.election.status === 'active' ? 'Eleição em andamento' : 'Eleição ENCERRADA'; $('elec').className = 'pill ' + (sn.election.status === 'active' ? 'on' : 'off');
+    $('rank').innerHTML = '<tr><th>#</th><th>Candidato</th><th>Votos</th><th>%</th></tr>' + sn.ranking.entries.map((e) => `<tr><td>${e.position}</td><td>${e.name}</td><td>${fmt(e.votes)}</td><td>${e.percent.toFixed(1)}%</td></tr>`).join('') + `<tr><td></td><td><b>Total</b></td><td><b>${fmt(sn.ranking.totalValidVotes)}</b></td><td></td></tr>`;
+    $('likes').textContent = `Saldo ${fmt(sn.likes.balance)} / ${fmt(sn.likes.threshold)} • ${fmt(s.voters.byOrigin.likes ?? 0)} eleitores de curtidas`;
+    if (document.activeElement !== $('thr')) $('thr').value = s.config.likeThreshold;
+    const m = s.metrics; $('health').innerHTML = `Eventos recebidos: ${fmt(m.eventsReceived)} • processados: ${fmt(m.eventsProcessed)} • duplicados: ${fmt(m.eventsDuplicate)} • inválidos: ${fmt(m.eventsInvalid)} • falhas: ${fmt(m.eventsFailed)}<br>Eleitores: ${fmt(s.voters.total)} (${Object.entries(s.voters.byState).map(([k, v]) => k + ' ' + v).join(', ') || '—'}) • fila: ${s.queue.depth}<br>Integridade do placar: <b>${s.integrity.ok ? 'OK' : 'DIVERGENTE'}</b>` + (s.health ? `<br>Reconexões: ${s.health.reconnects} • quedas: ${s.health.disconnects}` : '');
+  } catch (e) { msg('Sem acesso ao motor (' + e.message + '). Abra o link do painel exibido no terminal.'); }
+}
+$('finish').onclick = async () => { if (!confirm('Encerrar a eleição agora? Novos votos serão recusados e a cena mostrará o resultado.')) return; try { await api('/api/admin/finish', { method: 'POST' }); msg('Eleição encerrada.'); refresh(); } catch (e) { msg('Erro: ' + e.message); } };
+$('new').onclick = async () => { if (!confirm('Começar uma NOVA eleição? O placar volta a zero (a anterior fica salva).')) return; try { await api('/api/admin/new', { method: 'POST' }); msg('Nova eleição iniciada.'); refresh(); } catch (e) { msg('Erro: ' + e.message); } };
+$('setThr').onclick = async () => { try { await api('/api/admin/likes-threshold', { method: 'POST', body: JSON.stringify({ value: Number($('thr').value) }) }); msg('Limite de curtidas atualizado (vale até reiniciar; para fixar, edite src/preset.ts).'); refresh(); } catch (e) { msg('Erro: ' + e.message); } };
+refresh(); setInterval(refresh, 2000);
+</script></body></html>

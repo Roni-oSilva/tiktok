@@ -35,6 +35,7 @@ for (const [i, nm] of [[1, 'Ana'], [2, 'Bruno'], [3, 'Carla'], [4, 'Diego']] as 
 await engine.ingest(ev({ kind: 'like', viewer: {}, likeCount: 640, totalLikeCount: 1_000_640 }));
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${out}/2-caminhando.png` });
+await engine.ingest(ev({ kind: 'like', viewer: v(1, 'Ana'), likeCount: 400, totalLikeCount: 1_001_040 }));
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${out}/3-na-cabine.png` });
 await page.waitForTimeout(1600);
@@ -42,6 +43,7 @@ await page.screenshot({ path: `${out}/4-digitando.png` });
 await page.waitForTimeout(1300);
 await page.screenshot({ path: `${out}/5-fim.png` });
 await engine.drain();
+console.log('áudio:', JSON.stringify(await page.evaluate(() => ({ running: (window as any).__overlay.sound.running, music: (window as any).__overlay.sound.musicSource }))));
 const st = await page.evaluate(() => ({ target: (window as any).__overlay.target, applied: (window as any).__overlay.applied.size }));
 console.log('placar na tela:', JSON.stringify(st.target), 'aplicados:', st.applied);
 console.log('placar no motor:', JSON.stringify(Object.fromEntries(engine.candidates.all().map((c) => [c.id, c.votes]))));

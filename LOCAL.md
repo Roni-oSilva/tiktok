@@ -2,6 +2,8 @@
 
 A conexão com a live precisa sair do **seu computador**: o motor e a cena rodam aí, e você captura a cena no TikTok LIVE Studio ou no OBS.
 
+> **Atalho no Windows:** depois de instalar o Node.js e baixar o projeto, dê dois cliques em `iniciar-demo.bat` (simulação) ou `iniciar-live.bat` (live real; ele pede seu @usuario). No Mac/Linux: `./iniciar-demo.sh` e `./iniciar-live.sh`.
+
 ## 1. Instalar (uma vez)
 1. Instale o **Node.js 20 ou 22 (LTS)**: https://nodejs.org
 2. Baixe o projeto: `git clone https://github.com/Roni-oSilva/tiktok` e entre na pasta
@@ -25,14 +27,20 @@ A conexão com a live precisa sair do **seu computador**: o motor e a cena rodam
 
 ## 5. Música de fundo e som da urna
 - O **som da urna** (bip das teclas e bip longo do “FIM”) é gerado pela própria cena.
-- **Música:** coloque seu arquivo em `public/assets/music.mp3` (ou `.ogg`/`.m4a`). Sem arquivo, toca uma melodia provisória sintetizada.
-- Use só música que você tenha direito de usar; o TikTok pode silenciar ou derrubar lives com música protegida.
+- **Música:** vem uma marchinha **original** (`public/assets/default-music.wav`, composição própria gerada por `scripts/make-music.py`), sem direitos de terceiros. Para usar outra, coloque `public/assets/music.mp3` (ou `.ogg`/`.m4a`/`.wav`), que tem prioridade. Só use música que você tenha direito de usar.
 - Parâmetros na URL: `?musicvol=0.2` (volume da música), `?vol=0.7` (efeitos), `?music=0` (sem música), `?mute=1` (mudo), `?speed=1.5` (velocidade).
+- Os 8 personagens também são **originais** (gerados por `scripts/make-voters.mjs`). Fotos dos candidatos e a cabine/Congresso são imagens que você forneceu; a responsabilidade pelos direitos dessas imagens é sua.
 
 ## 6. Regras do jogo (editáveis em `src/preset.ts` e `src/config.ts`)
-Digite **13** (Lula) ou **22** (Flávio) — ou `!votar 13` — para escolher. Cada **Rosa = 1 voto** no candidato escolhido; sem escolha, o presente é ignorado (nunca vai para um candidato sorteado). A cada **1.000 curtidas** nasce um eleitor (hoje ele passa pela urna **sem votar em ninguém**; dá para mudar a política). Eleitores entram um de cada vez; com fila grande, a cena agrupa, sem perder votos.
+Digite **13** (Lula) ou **22** (Flávio) — ou `!votar 13` — para escolher. Cada **Rosa = 1 voto** no candidato escolhido; sem escolha, o presente é ignorado (nunca vai para um candidato sorteado). A cada **1.000 curtidas** nasce um eleitor que **vota**: o voto vai para o candidato com mais curtidas de espectadores identificados que escolheram 13/22 desde o último eleitor (repartido proporcionalmente quando nascem vários; sem sorteio). Se ninguém identificado curtiu, o eleitor só participa, sem voto. Eleitores entram um de cada vez; com fila grande, a cena agrupa, sem perder votos.
 
-## 7. Aviso
+## 7. Painel admin (encerrar / zerar)
+O terminal mostra a linha **“Painel admin”** com um link `http://127.0.0.1:8787/admin.html#token=...`. Abra-o **só no seu PC** (o token muda a cada início; para fixar, coloque `ADMIN_TOKEN=uma-senha-longa` no `.env`). Lá você vê placar, saúde da conexão e integridade, **encerra a eleição** (a cena mostra o vencedor) ou **começa uma nova** (zera o placar; a anterior fica salva). Não deixe esse link aparecer na live.
+
+## 8. Moderação de nomes
+Nomes com palavrões, xingamentos políticos, links ou @ aparecem como “Eleitor”/“Alguém”. A lista base está em `src/nameFilter.ts`; para acrescentar termos, use `names: { blocklist: ['termo'] }` em `src/preset.ts`.
+
+## 9. Aviso
 É um jogo de entretenimento, com aviso fixo na tela. Por envolver candidatos reais e presentes pagos, confira as regras do TikTok para conteúdo político e a legislação eleitoral vigente antes de ir ao ar.
 
 ## Continuar comigo no seu PC

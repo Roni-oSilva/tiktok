@@ -12,6 +12,7 @@ export type BusEventName =
   | 'voter.group'
   | 'election.updated'
   | 'election.finished'
+  | 'election.started'
   | 'candidate.vote_received'
   | 'candidate.ranking_changed'
   | 'gift.processed'

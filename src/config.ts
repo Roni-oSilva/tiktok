@@ -35,7 +35,8 @@ export interface GameConfig {
     votesPerVoter: number;
     mode: 'auto' | 'incremental' | 'cumulative';
     accumulation: 'global' | 'per_user';
-    targetPolicy: 'none' | 'fixed_candidate' | 'user_choice';
+    /** proportional_choice: o(s) voto(s) do(s) eleitor(es) de curtidas é(são) repartido(s) entre os candidatos na proporção das curtidas de espectadores identificados com escolha, desde o último eleitor (determinístico, sem sorteio). */
+    targetPolicy: 'none' | 'fixed_candidate' | 'user_choice' | 'proportional_choice';
     fixedCandidateId?: string;
     genericVoterName: string;
   };
@@ -52,6 +53,8 @@ export interface GameConfig {
     groupBatchSize: number;
   };
   reconnect: { initialMs: number; maxMs: number; factor: number; jitter: number; maxAttempts: number };
+  /** Termos extras a bloquear nos nomes exibidos (além da lista padrão em nameFilter.ts). */
+  names: { blocklist: string[] };
   dedupe: { memoryWindow: number };
   limits: { maxUnitsPerEvent: number; maxLikesPerEvent: number; maxNameLength: number };
 }
@@ -90,6 +93,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
   presentation: { enabled: true, maxConcurrent: 5, speed: 1, approachMs: 1500, voteMs: 600, groupThreshold: 50, groupBatchSize: 25 },
   reconnect: { initialMs: 1000, maxMs: 60000, factor: 2, jitter: 0.2, maxAttempts: 0 },
+  names: { blocklist: [] },
   dedupe: { memoryWindow: 50000 },
   limits: { maxUnitsPerEvent: 10000, maxLikesPerEvent: 1_000_000, maxNameLength: 40 },
 };
@@ -146,10 +150,12 @@ export function validateConfig(c: GameConfig): string[] {
   posInt(c.likes?.votesPerVoter, 'likes.votesPerVoter', 0);
   if (!['auto', 'incremental', 'cumulative'].includes(c.likes?.mode)) e.push('likes.mode inválido');
   if (!['global', 'per_user'].includes(c.likes?.accumulation)) e.push('likes.accumulation inválido');
-  if (!['none', 'fixed_candidate', 'user_choice'].includes(c.likes?.targetPolicy)) e.push('likes.targetPolicy inválido');
+  if (!['none', 'fixed_candidate', 'user_choice', 'proportional_choice'].includes(c.likes?.targetPolicy)) e.push('likes.targetPolicy inválido');
   if (c.likes?.targetPolicy === 'fixed_candidate' && !ids.has(c.likes.fixedCandidateId ?? '')) e.push('likes.fixedCandidateId deve ser um candidato existente');
   if (c.likes?.targetPolicy === 'user_choice' && c.likes.accumulation !== 'per_user')
     e.push('likes.targetPolicy=user_choice exige likes.accumulation=per_user (num acumulador global, quem completa o limite não é "dono" das curtidas)');
+  if (c.likes?.targetPolicy === 'proportional_choice' && c.likes.accumulation !== 'global') e.push('likes.targetPolicy=proportional_choice exige likes.accumulation=global');
+  if (!Array.isArray(c.names?.blocklist)) e.push('names.blocklist deve ser lista');
   if (c.likes?.accumulation === 'per_user' && c.likes.mode === 'cumulative') e.push('likes.accumulation=per_user não é compatível com mode=cumulative (o total da fonte é da sala)');
   posInt(c.presentation?.maxConcurrent, 'presentation.maxConcurrent');
   posNum(c.presentation?.speed, 'presentation.speed');

@@ -15,6 +15,10 @@ import type { ProcessorContext } from './processorContext.js';
 import { RankingService } from './rankingService.js';
 import type { ChatInput, EventSourceName, GiftInput, IngestResult, InputEvent, LikeInput, Mode, Outcome, Voter, VoterSpec } from './types.js';
 import { VoterService } from './voterService.js';
+import { resolveName } from './processorContext.js';
+
+const ADMIN = Symbol('admin-job');
+type AdminJob = { [ADMIN]: () => unknown | Promise<unknown> };
 
 export interface EngineOptions {
   dbPath: string;
@@ -80,7 +84,7 @@ export class ElectionEngine {
   readonly db: PersistenceService;
   readonly admin: AdminConfigService;
   readonly dedupe: EventDeduplicator;
-  readonly queue: EventQueue<unknown, IngestResult>;
+  readonly queue: EventQueue<unknown, any>;
   candidates!: CandidateService;
   ranking!: RankingService;
   voters!: VoterService;
@@ -102,7 +106,7 @@ export class ElectionEngine {
     this.db = new PersistenceService(opts.dbPath, { synchronous: opts.synchronous });
     this.admin = new AdminConfigService(this.db, this.bus, opts.config);
     this.dedupe = new EventDeduplicator(this.admin.get().dedupe.memoryWindow);
-    this.queue = new EventQueue<unknown, IngestResult>((raw) => this.processSync(raw));
+    this.queue = new EventQueue<unknown, any>((raw) => ((raw as AdminJob)?.[ADMIN] ? (raw as AdminJob)[ADMIN]() : this.processSync(raw)));
     this.openElection(opts.resume !== false);
   }
 
@@ -183,7 +187,7 @@ export class ElectionEngine {
       m.eventsRejected++;
       if (e.kind === 'gift') {
         m.votersRejected++;
-        this.bus.emit('voter.rejected', { reason: 'election_closed', displayName: e.viewer.displayName ?? null, simulated: e.simulated });
+        this.bus.emit('voter.rejected', { reason: 'election_closed', displayName: null, simulated: e.simulated });
       }
       return this.result('rejected_closed', 'eleição encerrada');
     }
@@ -283,13 +287,13 @@ export class ElectionEngine {
     }
     if (outcome === 'no_candidate') {
       m.votersRejected++;
-      this.bus.emit('voter.rejected', { reason: 'no_candidate_chosen', displayName: e.viewer.displayName ?? null, simulated: e.simulated });
+      this.bus.emit('voter.rejected', { reason: 'no_candidate_chosen', displayName: null, simulated: e.simulated });
     }
     if (e.kind === 'like' && extra?.likes && extra.likes.delta > 0) {
       this.bus.emit('likes.progress', { balance: extra.likes.balance, threshold: this.admin.get().likes.threshold, delta: extra.likes.delta, simulated: e.simulated });
     }
     if (outcome === 'command_applied' && extra?.chat?.candidateId) {
-      this.bus.emit('viewer.choice', { displayName: e.viewer.displayName ?? e.viewer.uniqueId ?? null, candidateId: extra.chat.candidateId, simulated: e.simulated });
+      this.bus.emit('viewer.choice', { displayName: resolveName(e.viewer, 'Alguém', this.admin.get().limits.maxNameLength, this.admin.get().names.blocklist), candidateId: extra.chat.candidateId, simulated: e.simulated });
     }
     if (e.kind === 'like' && extra?.likes && created.length > 0) {
       this.bus.emit('likes.threshold_reached', { voters: created.length, delta: extra.likes.delta, balance: extra.likes.balance, threshold: this.admin.get().likes.threshold, simulated: e.simulated });
@@ -327,6 +331,26 @@ export class ElectionEngine {
     this.election = this.db.getElection(this.election.id)!;
     this.bus.emit('election.finished', { electionId: this.election.id, ranking, simulated: this.mode === 'simulation' });
     return { ranking };
+  }
+
+  /** Executa `fn` na fila, entre dois eventos (nenhum evento é processado durante a operação). */
+  runExclusive<T>(fn: () => T | Promise<T>): Promise<T> {
+    return this.queue.push({ [ADMIN]: fn } as AdminJob);
+  }
+
+  /** Encerra a eleição atual (se ativa) e abre uma nova, zerada. Votos antigos permanecem no banco. */
+  startNewElection(): Promise<{ electionId: string; previousElectionId: string }> {
+    return this.runExclusive(async () => {
+      const previousElectionId = this.election.id;
+      if (this.isActive) this.finish();
+      await Promise.race([this.presentation.idle(), new Promise((r) => setTimeout(r, 8000))]);
+      const animator = this.presentation.animator;
+      this.dedupe.clear();
+      this.openElection(false);
+      this.presentation.animator = animator;
+      this.bus.emit('election.started', { electionId: this.election.id, simulated: this.mode === 'simulation' });
+      return { electionId: this.election.id, previousElectionId };
+    });
   }
 
   /** Reinicia a referência do contador cumulativo de curtidas (ex.: nova transmissão). */

@@ -32,7 +32,7 @@ describe('Cena (HTTP + ACK por WebSocket)', () => {
     const html = await fetch(`http://127.0.0.1:${port}/`);
     expect(html.status).toBe(200);
     expect(await html.text()).toContain('ELEIÇÃO PRESIDENCIAL');
-    expect((await fetch(`http://127.0.0.1:${port}/assets/voter_miles.png`)).headers.get('content-type')).toBe('image/png');
+    expect((await fetch(`http://127.0.0.1:${port}/assets/voters/voter_1.svg`)).headers.get('content-type')).toBe('image/svg+xml');
     expect((await fetch(`http://127.0.0.1:${port}/..%2f..%2fpackage.json`)).status).toBeGreaterThanOrEqual(403);
     expect((await fetch(`http://127.0.0.1:${port}/../package.json`)).status).not.toBe(200);
     const st = await (await fetch(`http://127.0.0.1:${port}/api/state`)).json();

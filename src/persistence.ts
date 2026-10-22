@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS combo_progress(
 CREATE TABLE IF NOT EXISTS like_accumulators(
   election_id TEXT NOT NULL, scope TEXT NOT NULL, balance INTEGER NOT NULL, total_counted INTEGER NOT NULL,
   voters_generated INTEGER NOT NULL, PRIMARY KEY(election_id, scope));
+CREATE TABLE IF NOT EXISTS like_window(
+  election_id TEXT NOT NULL, candidate_id TEXT NOT NULL, likes INTEGER NOT NULL, PRIMARY KEY(election_id, candidate_id));
 CREATE TABLE IF NOT EXISTS like_baseline(election_id TEXT PRIMARY KEY, last_total INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS viewer_choices(
   election_id TEXT NOT NULL, user_id TEXT NOT NULL, candidate_id TEXT NOT NULL, choice_ts INTEGER NOT NULL,
@@ -200,6 +202,19 @@ export class PersistenceService {
   likeTotals(electionId: string): { counted: number; balance: number; votersGenerated: number } {
     const r = this.s('SELECT COALESCE(SUM(total_counted),0) c, COALESCE(SUM(balance),0) b, COALESCE(SUM(voters_generated),0) v FROM like_accumulators WHERE election_id=?').get(electionId) as any;
     return { counted: r.c, balance: r.b, votersGenerated: r.v };
+  }
+
+  // ---- janela de curtidas por candidato (política proportional_choice) ----
+  addLikeWindow(electionId: string, candidateId: string, likes: number): void {
+    this.s('INSERT INTO like_window(election_id,candidate_id,likes) VALUES(?,?,?) ON CONFLICT(election_id,candidate_id) DO UPDATE SET likes=likes+excluded.likes').run(electionId, candidateId, likes);
+  }
+  getLikeWindow(electionId: string): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const r of this.s('SELECT candidate_id c, likes l FROM like_window WHERE election_id=? AND likes>0').all(electionId) as any[]) out[r.c] = r.l;
+    return out;
+  }
+  clearLikeWindow(electionId: string): void {
+    this.s('DELETE FROM like_window WHERE election_id=?').run(electionId);
   }
 
   // ---- escolhas e comandos ----

@@ -28,6 +28,10 @@ export class EventDeduplicator {
     return `fp:${e.kind}:` + createHash('sha1').update(JSON.stringify(parts)).digest('hex');
   }
 
+  clear(): void {
+    this.seen.clear();
+  }
+
   has(key: string): boolean {
     return this.seen.has(key);
   }

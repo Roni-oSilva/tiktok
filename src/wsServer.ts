@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
@@ -17,6 +18,21 @@ const MIME: Record<string, string> = {
 };
 
 type Phase = 'approach' | 'vote';
+
+/** Só aceita Host local: bloqueia DNS rebinding e acesso por outro nome/IP. */
+export function isLocalHost(h: string | undefined): boolean {
+  if (!h) return false;
+  const host = h.startsWith('[') ? h.slice(0, h.indexOf(']') + 1) : h.split(':')[0];
+  return ['127.0.0.1', 'localhost', '[::1]'].includes(host.toLowerCase());
+}
+function readBody(req: IncomingMessage, max = 4096): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let b = '';
+    req.on('data', (c) => { b += c; if (b.length > max) { reject(new Error('corpo grande demais')); req.destroy(); } });
+    req.on('end', () => resolve(b));
+    req.on('error', reject);
+  });
+}
 
 /**
  * Animador dirigido pela cena: aguarda o ACK da interface ao fim da caminhada e ao fim da votação.
@@ -81,6 +97,10 @@ export class GameWsServer {
   private off?: () => void;
   private overlays = new Set<WebSocket>();
   readonly animator: WsAnimator;
+  /** Token do painel admin. Sem token, os endpoints /api/admin/* ficam desativados. */
+  adminToken?: string;
+  /** Informações extras no status do admin (ex.: saúde da conexão). */
+  extraStatus?: () => unknown;
 
   constructor(private readonly engine: ElectionEngine, private readonly port = 8787, private readonly host = '127.0.0.1', fallback?: VoterAnimator) {
     this.animator = new WsAnimator(() => this.overlays.size > 0, fallback);
@@ -89,6 +109,10 @@ export class GameWsServer {
   private async serve(req: IncomingMessage, res: ServerResponse): Promise<void> {
     try {
       const url = new URL(req.url ?? '/', 'http://x');
+      if (url.pathname.startsWith('/api/admin/')) {
+        await this.admin(req, res, url.pathname);
+        return;
+      }
       if (url.pathname === '/api/state') {
         res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(this.engine.snapshot()));
         return;
@@ -106,9 +130,40 @@ export class GameWsServer {
     }
   }
 
+  private async admin(req: IncomingMessage, res: ServerResponse, path: string): Promise<void> {
+    const json = (code: number, body: unknown): void => void res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(body));
+    const given = Buffer.from(String(req.headers['x-admin-token'] ?? ''));
+    const want = Buffer.from(this.adminToken ?? '');
+    if (!this.adminToken || !isLocalHost(req.headers.host) || given.length !== want.length || !timingSafeEqual(given, want)) return json(403, { error: 'não autorizado' });
+    const e = this.engine;
+    if (path === '/api/admin/status' && req.method === 'GET') {
+      return json(200, { snapshot: e.snapshot(), metrics: e.metrics.snapshot(), queue: e.queue.stats(), integrity: e.ranking.verifyIntegrity(), voters: e.db.voterStats(e.election.id), config: { likeThreshold: e.admin.get().likes.threshold }, health: this.extraStatus?.() ?? null, overlays: this.overlays.size });
+    }
+    if (req.method !== 'POST') return json(405, { error: 'método' });
+    if (path === '/api/admin/finish') {
+      const r = await e.runExclusive(() => e.finish());
+      return json(200, { ok: true, ranking: r.ranking });
+    }
+    if (path === '/api/admin/new') return json(200, { ok: true, ...(await e.startNewElection()) });
+    if (path === '/api/admin/likes-threshold') {
+      const v = Number(JSON.parse((await readBody(req)) || '{}').value);
+      try { e.admin.setLikeThreshold(v); } catch (err) { return json(400, { error: (err as Error).message }); }
+      return json(200, { ok: true, threshold: v });
+    }
+    return json(404, { error: 'rota' });
+  }
+
   async start(): Promise<number> {
     this.http = createServer((req, res) => void this.serve(req, res));
-    this.wss = new WebSocketServer({ server: this.http });
+    this.wss = new WebSocketServer({
+      server: this.http,
+      verifyClient: ({ req }: { req: IncomingMessage }) => {
+        if (!isLocalHost(req.headers.host)) return false;
+        const origin = req.headers.origin; // páginas de outros sites não podem se conectar
+        if (origin) { try { if (!isLocalHost(new URL(origin).host)) return false; } catch { return false; } }
+        return true;
+      },
+    });
     await new Promise<void>((res, rej) => {
       this.http!.once('error', rej);
       this.http!.listen(this.port, this.host, () => res());
@@ -136,6 +191,12 @@ export class GameWsServer {
     });
     this.off = this.engine.bus.on('*', (m: BusMessage) => {
       const payload = JSON.stringify(m);
+      if (m.type === 'election.started') {
+        // nova eleição: todas as cenas recebem um estado zerado
+        const snap = JSON.stringify({ type: 'snapshot', ts: Date.now(), data: this.engine.snapshot() });
+        for (const c of this.wss!.clients) if (c.readyState === WebSocket.OPEN) c.send(snap);
+        return;
+      }
       for (const c of this.wss!.clients) if (c.readyState === WebSocket.OPEN) c.send(payload);
     });
     const addr = this.http.address();

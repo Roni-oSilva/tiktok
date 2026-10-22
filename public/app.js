@@ -6,8 +6,8 @@ const THEME = {
   flavio: { color: '#1d6fd8', photo: 'assets/cand_flavio.jpg', short: 'FLÁVIO' },
 };
 const FALLBACK_COLORS = ['#2a9d8f', '#f4a261', '#9b5de5', '#e76f51'];
-const SPRITES = ['assets/voter_miles.png', 'assets/voter_gwen.png', 'assets/voter_pavitr.png', 'assets/voter_punk.png'];
-const GROUND_Y = 590;            // base dos pés dentro de #scene (px do palco)
+const SPRITES = Array.from({ length: 8 }, (_, i) => `assets/voters/voter_${i + 1}.svg`); // personagens originais
+const GROUND_Y = 454;            // base dos pés dentro de #scene (px do palco)
 const BOOTH_HIDE_X = 700;        // x (esquerda do sprite) em que o eleitor fica atrás da cabine
 const EXIT_X = 1120;
 
@@ -30,7 +30,7 @@ const S = {
   simulated: false, spriteIdx: 0, walkers: new Map(), urnaBusy: Promise.resolve(), likes: { balance: 0, threshold: 1000 },
   finished: false, ranking: null, voteApplied: 0,
 };
-window.__overlay = S; // facilita testes e depuração
+window.__overlay = S; S.sound = sound; // facilita testes e depuração
 
 const theme = (c, i) => THEME[c.id] ?? { color: FALLBACK_COLORS[i % FALLBACK_COLORS.length], photo: null, short: c.name.toUpperCase() };
 const speed = () => Math.min(3.5, 1 + S.backlog / 8) * Number(params.get('speed') ?? 1);
@@ -106,14 +106,14 @@ function spawnVoter(m) {
   const tag = document.createElement('div'); tag.className = 'tag';
   tag.textContent = `${m.origin === 'likes' ? '❤' : '🌹'} ${m.displayName}`;
   el.append(img, tag);
-  el.style.transform = `translate(-200px, ${GROUND_Y - 190}px)`;
+  el.style.transform = `translate(-200px, ${GROUND_Y}px)`;
   $('voters').appendChild(el);
   return { el, img, x: -200 };
 }
 
 function walk(w, toX, ms) {
   const from = w.x;
-  const anim = w.el.animate([{ transform: `translate(${from}px, ${GROUND_Y - 190}px)` }, { transform: `translate(${toX}px, ${GROUND_Y - 190}px)` }], { duration: ms, easing: 'linear', fill: 'forwards' });
+  const anim = w.el.animate([{ transform: `translate(${from}px, ${GROUND_Y}px)` }, { transform: `translate(${toX}px, ${GROUND_Y}px)` }], { duration: ms, easing: 'linear', fill: 'forwards' });
   const bob = w.img.animate([{ transform: 'translateY(0) rotate(-2deg)' }, { transform: 'translateY(-14px) rotate(2deg)' }, { transform: 'translateY(0) rotate(-2deg)' }], { duration: 340 / Math.min(2.2, speed()), iterations: Infinity });
   const steps = setInterval(() => sound.step(), 340 / Math.min(2.2, speed()));
   return anim.finished.then(() => { w.x = toX; bob.cancel(); clearInterval(steps); }).catch(() => { bob.cancel(); clearInterval(steps); });
@@ -173,7 +173,7 @@ async function urnaSequence(voterId) {
 
 async function onVoting(d) {
   if (!S.walkers.has(d.voterId)) { // cena conectada no meio do caminho: encosta o eleitor na cabine
-    const w = spawnVoter(S.meta.get(d.voterId) ?? d); w.x = BOOTH_HIDE_X; w.el.style.transform = `translate(${BOOTH_HIDE_X}px, ${GROUND_Y - 190}px)`; S.walkers.set(d.voterId, w);
+    const w = spawnVoter(S.meta.get(d.voterId) ?? d); w.x = BOOTH_HIDE_X; w.el.style.transform = `translate(${BOOTH_HIDE_X}px, ${GROUND_Y}px)`; S.walkers.set(d.voterId, w);
   }
   await runUrna(d.voterId);
 }
@@ -200,6 +200,8 @@ function onGroup(d) {
 
 // ---------- mensagens do motor ----------
 function applySnapshot(s) {
+  for (const w of S.walkers.values()) w.el.remove();
+  S.walkers.clear(); S.meta.clear(); S.applied.clear(); $('urna').hidden = true; $('winner').hidden = true; $('ticker').innerHTML = '';
   S.simulated = !!s.simulated; $('simBanner').hidden = !s.simulated;
   S.candidates = s.candidates ?? [];
   S.target = {}; S.shown = {};

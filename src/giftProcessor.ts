@@ -62,7 +62,7 @@ export class GiftProcessor {
       return { outcome: 'no_candidate', detail: 'espectador sem candidato escolhido', specs: [], newUnits, votesPerUnit };
     }
 
-    const name = resolveName(e.viewer, cfg.gifts.genericVoterName, cfg.limits.maxNameLength);
+    const name = resolveName(e.viewer, cfg.gifts.genericVoterName, cfg.limits.maxNameLength, cfg.names.blocklist);
     const base = { displayName: name, origin: 'gift' as const, userId: e.viewer.userId ?? null, candidateId: target?.id ?? null, participationOnly };
     const specs: VoterSpec[] =
       cfg.gifts.voterMode === 'per_unit'

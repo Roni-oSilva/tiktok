@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { ElectionEngine } from './electionEngine.js';
 import { HealthMonitor } from './healthMonitor.js';
 import { createLogger } from './logger.js';
@@ -23,9 +24,12 @@ async function main() {
   const engine = new ElectionEngine({ dbPath: args.db ?? `data/${mode}.db`, mode, logger: log, config: LULA_FLAVIO_PRESET });
   const health = new HealthMonitor(engine);
   const ws = new GameWsServer(engine, Number(args.port ?? process.env.WS_PORT ?? 8787), '127.0.0.1', new TimerAnimator(() => engine.admin.get()));
+  ws.adminToken = process.env.ADMIN_TOKEN || randomBytes(12).toString('hex');
+  ws.extraStatus = () => health.snapshot();
   engine.presentation.animator = ws.animator; // a cena confirma (ACK) cada etapa; sem cena conectada, usa temporizador
   const port = await ws.start();
   log.info(`Cena (adicione como fonte de navegador/janela): http://127.0.0.1:${port}/`, { port });
+  log.info(`Painel admin (encerrar/zerar): http://127.0.0.1:${port}/admin.html#token=${ws.adminToken}`);
   const recovered = engine.recoverPending();
   if (recovered) log.info('eleitores pendentes reapresentados', { count: recovered });
   health.start();

@@ -1,5 +1,5 @@
 // Sons gerados no navegador (WebAudio). Nenhum arquivo de áudio é necessário.
-// Música de fundo: usa assets/music.mp3 (ou .ogg/.m4a) se existir; senão toca uma melodia provisória sintetizada.
+// Música de fundo: usa assets/music.mp3 (ou .ogg/.m4a/.wav) se existir; senão toca assets/default-music.wav (marchinha original).
 const params = new URLSearchParams(location.search);
 const num = (k, d) => (params.has(k) && !Number.isNaN(Number(params.get(k))) ? Number(params.get(k)) : d);
 
@@ -64,16 +64,17 @@ export class Sound {
   async startMusic() {
     if (this.musicStarted || !this.musicOn) return;
     this.musicStarted = true;
-    for (const ext of ['mp3', 'ogg', 'm4a']) {
+    // Seu arquivo (assets/music.*) tem prioridade; senão toca a marchinha original que acompanha o projeto.
+    for (const src of ['assets/music.mp3', 'assets/music.ogg', 'assets/music.m4a', 'assets/music.wav', 'assets/default-music.wav']) {
       try {
-        const r = await fetch(`assets/music.${ext}`, { method: 'HEAD' });
+        const r = await fetch(src, { method: 'HEAD' });
         if (r.ok) {
-          const a = new Audio(`assets/music.${ext}`);
+          const a = new Audio(src);
           a.loop = true;
           a.volume = Math.min(1, this.musicVol);
           await a.play();
           this.music = a;
-          this.musicSource = `assets/music.${ext}`;
+          this.musicSource = src;
           return;
         }
       } catch { /* tenta o próximo */ }

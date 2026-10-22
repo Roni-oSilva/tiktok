@@ -66,7 +66,7 @@ Motor de jogo em TypeScript/Node.js: recebe presentes, curtidas e comandos de ch
 **Sincronização visual:** `candidate.vote_received`/`election.updated` indicam o voto **já confirmado**. Para que o placar só suba quando o personagem votar, a interface deve guardar o `ranking` e exibi-lo em `voter.voting` do `voterId` correspondente (o `voterId` vai em `candidate.vote_received`).
 
 ## Cena (visual)
-A cena 9:16 (1080×1920) é servida pelo próprio motor em `http://127.0.0.1:8787/` (`public/`): placar Lula 13 × Flávio 22, cabine, 4 personagens que votam um de cada vez, urna eletrônica com bips, música de fundo e ACK por WebSocket (o eleitor só conclui quando a cena confirma; se a cena não responder, vira `failed` com o voto intacto). Guia completo para rodar no PC: **[LOCAL.md](LOCAL.md)**.
+A cena 9:16 (1080×1920) é servida pelo próprio motor em `http://127.0.0.1:8787/` (`public/`): placar Lula 13 × Flávio 22, cabine, 8 personagens originais que votam um de cada vez, urna eletrônica com bips, música de fundo e ACK por WebSocket (o eleitor só conclui quando a cena confirma; se a cena não responder, vira `failed` com o voto intacto). Guia completo para rodar no PC: **[LOCAL.md](LOCAL.md)**.
 
 ## Como usar
 
@@ -113,7 +113,7 @@ Cenário: 10.000 eventos lógicos → **14.270 enviados** (combos geram vários 
 | Votos válidos totais | 17.530 (c1 6.819 · c2 5.633 · c3 5.078) |
 | Eleitores criados | 5.781 (4.974 de presentes · 807 de curtidas) |
 | Curtidas contabilizadas / saldo final | 807.186 / 186 (807 eleitores) |
-| Tempo total / vazão | 2,19 s / ≈ 6.500 eventos/s (execuções variam ~6.500–6.700) |
+| Tempo total / vazão | 2,19 s / ≈ 6.500 eventos/s (execuções variam ~6.300–6.700; o JSON versionado é da última execução) |
 | Maior profundidade da fila | 499 |
 | Integridade do ranking (memória × livro de votos × soma dos eleitores, % = 100) | OK |
 | Concordância com o oráculo (votos por candidato, eleitores, curtidas, saldo, unidades) | OK |
@@ -157,3 +157,6 @@ Cenário: 10.000 eventos lógicos → **14.270 enviados** (combos geram vários 
 4. Painel: ranking (`election.updated`), ultrapassagens (`candidate.ranking_changed`), rejeições (`voter.rejected`), aviso de simulação (`snapshot.notice`).
 5. Validar o adaptador numa live de teste real e ajustar `inputNormalizer`.
 6. Painel admin sobre `AdminConfigService` (limite de curtidas, tabela de presentes, políticas).
+
+## Atualização (fase 2)
+Curtidas que votam (`proportional_choice`), filtro de nomes (`src/nameFilter.ts`), painel admin com token (`/admin.html`; encerrar/zerar eleição), personagens e música originais, layout com a área de baixo livre para chat/presentes, e scripts `iniciar-*.bat|sh`. Testes: 70 passando.
