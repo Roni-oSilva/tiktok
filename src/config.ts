@@ -12,7 +12,11 @@ export interface GiftRule {
 
 export interface GameConfig {
   election: { name: string; candidates: { id: string; name: string; command: string }[] };
-  commands: { vote: string[] };
+  commands: {
+    vote: string[];
+    /** Aceita a mensagem só com o comando do candidato (ex.: "13"), sem o prefixo. */
+    allowBareNumber: boolean;
+  };
   gifts: {
     rules: GiftRule[];
     /** record_only: registra o evento e não atribui votos. default_votes: usa unknownVotes por unidade. */
@@ -61,7 +65,7 @@ export const DEFAULT_CONFIG: GameConfig = {
       { id: 'candidato3', name: 'Candidato 3', command: 'candidato3' },
     ],
   },
-  commands: { vote: ['!votar'] },
+  commands: { vote: ['!votar'], allowBareNumber: false },
   gifts: {
     rules: [
       // O id 5655 é o valor comumente citado pela comunidade para a Rosa; NÃO foi validado em live real.

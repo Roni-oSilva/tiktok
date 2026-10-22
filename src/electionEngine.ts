@@ -188,7 +188,7 @@ export class ElectionEngine {
       return this.result('rejected_closed', 'eleição encerrada');
     }
 
-    if (e.kind === 'chat' && !this.chat.isCommand(e.text, cfg.commands.vote)) {
+    if (e.kind === 'chat' && !this.chat.isCommand(e.text, cfg.commands.vote, cfg.commands.allowBareNumber ? (t) => !!this.candidates.byCommandToken(t) : undefined)) {
       m.eventsIgnored++;
       return this.result('ignored_chat');
     }
@@ -285,6 +285,12 @@ export class ElectionEngine {
       m.votersRejected++;
       this.bus.emit('voter.rejected', { reason: 'no_candidate_chosen', displayName: e.viewer.displayName ?? null, simulated: e.simulated });
     }
+    if (e.kind === 'like' && extra?.likes && extra.likes.delta > 0) {
+      this.bus.emit('likes.progress', { balance: extra.likes.balance, threshold: this.admin.get().likes.threshold, delta: extra.likes.delta, simulated: e.simulated });
+    }
+    if (outcome === 'command_applied' && extra?.chat?.candidateId) {
+      this.bus.emit('viewer.choice', { displayName: e.viewer.displayName ?? e.viewer.uniqueId ?? null, candidateId: extra.chat.candidateId, simulated: e.simulated });
+    }
     if (e.kind === 'like' && extra?.likes && created.length > 0) {
       this.bus.emit('likes.threshold_reached', { voters: created.length, delta: extra.likes.delta, balance: extra.likes.balance, threshold: this.admin.get().likes.threshold, simulated: e.simulated });
     }
@@ -339,8 +345,11 @@ export class ElectionEngine {
       simulated: this.mode === 'simulation',
       notice: this.mode === 'simulation' ? 'SIMULAÇÃO: eventos fictícios, não vêm de uma transmissão real' : undefined,
       election: { id: this.election.id, name: this.election.name, status: this.election.status },
+      candidates: this.candidates.all().map((c) => ({ id: c.id, name: c.name, command: c.command })),
       ranking: this.ranking.compute(),
-      likes: this.db.likeTotals(this.election.id),
+      likes: { ...this.db.likeTotals(this.election.id), threshold: this.admin.get().likes.threshold },
+      /** Votos já confirmados cujos eleitores ainda não terminaram de votar na cena (a interface os soma ao votarem). */
+      pending: this.db.pendingVoters(this.election.id).filter((v) => v.voteConfirmed && v.candidateId).map((v) => ({ voterId: v.id, candidateId: v.candidateId, votes: v.votes })),
       presentationBacklog: this.presentation.backlog,
     };
   }

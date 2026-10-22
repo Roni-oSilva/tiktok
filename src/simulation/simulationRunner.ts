@@ -34,6 +34,8 @@ export interface SimOptions {
   reorderRate?: number;
   disconnectEvery?: number;
   restartEvery?: number;
+  /** Fração dos comandos de chat enviados só com o número (ex.: "13"). Padrão 0. */
+  bareRate?: number;
   mix?: Partial<SimMix>;
   /** Nome -> votos, deve refletir a configuração do motor. */
   giftVotes?: { rose: number; special: { name: string; votes: number }[] };
@@ -57,6 +59,7 @@ export interface GeneratedScenario {
   stats: { sent: number; delivered: number; lost: number; uniqueValid: number; duplicatesInjected: number; invalidInjected: number; disconnects: number; restarts: number };
 }
 
+const FIRST_NAMES = ['Ana', 'Bruno', 'Carla', 'Diego', 'Elisa', 'Felipe', 'Gabi', 'Hugo', 'Isabela', 'João', 'Karina', 'Lucas', 'Mariana', 'Nando', 'Olívia', 'Paulo', 'Rafa', 'Sofia', 'Tiago', 'Vitória'];
 const DEFAULT_MIX: SimMix = { chat: 15, rose: 30, special: 5, unknownGift: 2, combo: 6, likes: 20, noChoiceGift: 6 };
 
 export class SimulationRunner {
@@ -94,7 +97,7 @@ export class SimulationRunner {
     let disconnectedLeft = 0;
     let logical = 0;
 
-    const viewer = (i: number) => ({ userId: `u${i}`, uniqueId: `user_${i}`, displayName: `Espectador ${i}` });
+    const viewer = (i: number) => ({ userId: `u${i}`, uniqueId: `user_${i}`, displayName: `${FIRST_NAMES[i % FIRST_NAMES.length]} ${i}` });
     const base = () => ({ source: 'simulation', simulated: true, ts: (ts += rng.int(1, 40)), eventId: `sim-${this.seed()}-${++this.n}` });
     const live = () => disconnectedLeft === 0;
 
@@ -174,7 +177,8 @@ export class SimulationRunner {
       if (rng.next() * total < mix.chat) {
         const i = rng.int(0, noChoiceFrom - 1);
         const idx = rng.int(0, o.candidateCommands.length - 1);
-        push({ ...base(), kind: 'chat', viewer: viewer(i), text: `!votar ${o.candidateCommands[idx]}` }, 'chat');
+        const cmd = o.candidateCommands[idx];
+        push({ ...base(), kind: 'chat', viewer: viewer(i), text: rng.chance(o.bareRate ?? 0) ? cmd : `!votar ${cmd}` }, 'chat');
         if (!lostNow) choice.set(i, o.candidateIds[idx]);
         continue;
       }

@@ -65,6 +65,9 @@ Motor de jogo em TypeScript/Node.js: recebe presentes, curtidas e comandos de ch
 
 **Sincronização visual:** `candidate.vote_received`/`election.updated` indicam o voto **já confirmado**. Para que o placar só suba quando o personagem votar, a interface deve guardar o `ranking` e exibi-lo em `voter.voting` do `voterId` correspondente (o `voterId` vai em `candidate.vote_received`).
 
+## Cena (visual)
+A cena 9:16 (1080×1920) é servida pelo próprio motor em `http://127.0.0.1:8787/` (`public/`): placar Lula 13 × Flávio 22, cabine, 4 personagens que votam um de cada vez, urna eletrônica com bips, música de fundo e ACK por WebSocket (o eleitor só conclui quando a cena confirma; se a cena não responder, vira `failed` com o voto intacto). Guia completo para rodar no PC: **[LOCAL.md](LOCAL.md)**.
+
 ## Como usar
 
 Requisitos: Node ≥ 20 (testado com Node 22.22). `npm install`

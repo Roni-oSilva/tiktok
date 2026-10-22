@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eleição ao vivo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <div id="sky"></div>
+  <img id="congresso" src="assets/congresso.png" alt="">
+  <div id="ground"></div>
+
+  <header id="header">
+    <div id="title">ELEIÇÃO PRESIDENCIAL</div>
+    <div id="subtitle">JOGO DE ENTRETENIMENTO • NÃO É PESQUISA ELEITORAL</div>
+  </header>
+  <div id="simBanner" hidden>SIMULAÇÃO — EVENTOS FICTÍCIOS</div>
+  <div id="connDot" title="conexão com o motor"></div>
+
+  <section id="cards"></section>
+  <section id="shareBar"><div id="shareA"></div><div id="shareB"></div><div id="shareLabel"></div></section>
+
+  <div id="scene">
+    <img id="cabine" src="assets/cabine.png" alt="">
+    <div id="voters"></div>
+    <div id="groupBurst" hidden></div>
+  </div>
+
+  <div id="urna" hidden>
+    <div class="urnaLabel">URNA ELETRÔNICA</div>
+    <div id="urnaScreen"></div>
+    <div id="keypad"></div>
+  </div>
+
+  <section id="howto">
+    <div class="howTitle">COMO VOTAR</div>
+    <div class="steps">
+      <div class="step"><b>1</b><span>Digite <em id="numA">13</em> ou <em id="numB">22</em> no chat</span></div>
+      <div class="step"><b>2</b><span>Mande uma <em>🌹 Rosa</em> = 1 voto</span></div>
+      <div class="step"><b>3</b><span>Cada <em id="thr">1.000</em> curtidas = 1 eleitor</span></div>
+    </div>
+    <div id="likeBar"><div id="likeFill"></div><div id="likeText"></div></div>
+  </section>
+  <section id="ticker"></section>
+  <footer id="disclaimer">Entretenimento. Sem vínculo com candidatos, partidos ou a Justiça Eleitoral. Resultado não representa pesquisa nem previsão.</footer>
+
+  <div id="winner" hidden></div>
+  <button id="soundBtn" hidden>🔊 Toque para ativar o som</button>
+</div>
+<script src="app.js" type="module"></script>
+</body>
+</html>

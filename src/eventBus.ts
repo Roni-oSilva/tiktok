@@ -16,6 +16,8 @@ export type BusEventName =
   | 'candidate.ranking_changed'
   | 'gift.processed'
   | 'likes.threshold_reached'
+  | 'likes.progress'
+  | 'viewer.choice'
   | 'config.updated'
   | 'source.status'
   | 'health.status';

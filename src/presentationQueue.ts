@@ -128,6 +128,10 @@ export class PresentationQueue {
         voterIds: batch.map((v) => v.id),
         sampleNames: batch.slice(0, 5).map((v) => v.displayName),
         votes: batch.reduce((s, v) => s + (v.voteConfirmed ? v.votes : 0), 0),
+        votesByCandidate: batch.reduce<Record<string, number>>((m, v) => {
+          if (v.voteConfirmed && v.candidateId) m[v.candidateId] = (m[v.candidateId] ?? 0) + v.votes;
+          return m;
+        }, {}),
       });
       this.voters.completeGroup(batch);
     } catch (e) {

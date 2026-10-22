@@ -9,9 +9,12 @@ export interface ChatDecision {
 
 /** Interpreta `!votar <comando-do-candidato>` e registra a escolha do espectador (só vale daqui para frente). */
 export class ChatCommandProcessor {
-  isCommand(text: string, prefixes: readonly string[]): boolean {
-    const first = text.trim().split(/\s+/, 1)[0]?.toLowerCase();
-    return !!first && prefixes.some((p) => p.toLowerCase() === first);
+  isCommand(text: string, prefixes: readonly string[], bare?: (token: string) => boolean): boolean {
+    const t = text.trim().toLowerCase();
+    const first = t.split(/\s+/, 1)[0];
+    if (!first) return false;
+    if (prefixes.some((p) => p.toLowerCase() === first)) return true;
+    return !!bare && t === first && bare(first); // mensagem composta só pelo número do candidato
   }
 
   process(e: ChatInput, ctx: ProcessorContext): ChatDecision {
@@ -23,7 +26,9 @@ export class ChatCommandProcessor {
       log('no_user_id');
       return { outcome: 'command_rejected', detail: 'sem identificador de usuário: escolha não pode ser associada' };
     }
-    const token = e.text.trim().split(/\s+/)[1];
+    const parts = e.text.trim().split(/\s+/);
+    const isPrefixed = ctx.cfg().commands.vote.some((p) => p.toLowerCase() === parts[0].toLowerCase());
+    const token = isPrefixed ? parts[1] : parts[0];
     const cand = token ? ctx.candidates.byCommandToken(token) : undefined;
     if (!cand) {
       log('unknown_candidate');

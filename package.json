@@ -5,14 +5,18 @@
   "private": true,
   "type": "module",
   "main": "dist/index.js",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "loadtest": "tsx scripts/loadtest.ts",
     "sim": "tsx src/main.ts --mode=simulation",
-    "live": "tsx src/main.ts --mode=live"
+    "live": "tsx src/main.ts --mode=live",
+    "demo": "tsx src/main.ts --mode=simulation --events=1500 --paceMs=450 --loop=true",
+    "shoot": "tsx scripts/shoot.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
@@ -23,6 +27,7 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.5",
     "@types/ws": "^8.5.0",
+    "playwright-core": "^1.64.1",
     "tsx": "^4.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
