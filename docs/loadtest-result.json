@@ -1,0 +1,104 @@
+{
+  "params": {
+    "logicalEvents": 10000,
+    "seed": 2024,
+    "burstConcurrency": 500,
+    "restarts": 2,
+    "disconnects": 6,
+    "db": "SQLite (arquivo, WAL, synchronous=NORMAL)",
+    "presentation": "instantânea (estados avançam sem temporizadores)"
+  },
+  "events": {
+    "sentBySimulator": 14270,
+    "lostWhileSourceDisconnected": 24,
+    "deliveredToEngine": 14246,
+    "processedStateChanging": 8833,
+    "rejectedByRule": 3551,
+    "invalid": 295,
+    "duplicatesIgnored": 580,
+    "noopAlreadyCounted": 987,
+    "chatIgnoredNotCommand": 0,
+    "failed": 0,
+    "injected": {
+      "duplicates": 580,
+      "invalid": 295
+    },
+    "byOutcome": {
+      "no_candidate": 3243,
+      "no_new_units": 987,
+      "invalid": 295,
+      "accumulated": 1839,
+      "duplicate": 580,
+      "accepted": 5781,
+      "command_applied": 1213,
+      "unknown_gift": 308
+    },
+    "storedInEventsTable": 13371
+  },
+  "gifts": {
+    "giftEvents": 9512,
+    "giftUnitsCounted": 11405
+  },
+  "votes": {
+    "totalValidVotes": 17530,
+    "byCandidate": {
+      "candidato1": 6819,
+      "candidato2": 5633,
+      "candidato3": 5078
+    },
+    "confirmedMetric": 17530
+  },
+  "voters": {
+    "created": 5781,
+    "fromGifts": 4974,
+    "fromLikes": 807,
+    "byState": {
+      "completed": 5781
+    }
+  },
+  "likes": {
+    "counted": 807186,
+    "finalBalance": 186,
+    "votersGenerated": 807,
+    "threshold": 1000
+  },
+  "timing": {
+    "totalSeconds": 2.187,
+    "ingestSeconds": 2.187,
+    "eventsPerSecondDelivered": 6514,
+    "eventsPerSecondSent": 6525,
+    "queueHighWater": 499
+  },
+  "integrity": {
+    "rankingMatchesLedger": true,
+    "problems": [],
+    "percentTotal": 100
+  },
+  "oracle": {
+    "match": {
+      "votes": true,
+      "giftVoters": true,
+      "likeVoters": true,
+      "likesCounted": true,
+      "likeBalance": true,
+      "giftUnits": true
+    },
+    "allMatch": true,
+    "expected": {
+      "votesByCandidate": {
+        "candidato1": 6819,
+        "candidato2": 5633,
+        "candidato3": 5078
+      },
+      "giftVoters": 4974,
+      "likeVoters": 807,
+      "giftUnitsCounted": 11405,
+      "giftUnitsWithVotes": 6906,
+      "likesCounted": 807186,
+      "likeBalance": 186,
+      "ignoredNoChoice": 3243,
+      "unknownGiftEvents": 308
+    }
+  },
+  "dbSizeKB": 10100
+}

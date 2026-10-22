@@ -1,0 +1,30 @@
+{
+  "name": "tiktok-election-engine",
+  "version": "0.1.0",
+  "description": "Motor (sem interface visual) de eleição interativa para TikTok LIVE",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "loadtest": "tsx scripts/loadtest.ts",
+    "sim": "tsx src/main.ts --mode=simulation",
+    "live": "tsx src/main.ts --mode=live"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "tiktok-live-connector": "2.5.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.5",
+    "@types/ws": "^8.5.0",
+    "tsx": "^4.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
